@@ -151,6 +151,53 @@ namespace start
 			return true;
 		}
 
+		// Blood on the Ice, the case this house belongs to (the owner, 2026-09-18: "hjerim should either
+		// deactivate the blood on the ice quest or set it as complete"). CompleteQuest is the game's own
+		// "case closed" mark - the same one the console's completequest sets - and it runs no stage
+		// fragment, so none of the quest's content fires; Stop() is the lighter touch. Both are native
+		// functions on Quest with no C++ handle, so both go through the Papyrus VM.
+		void SettleBloodOnTheIce(Report& a_report)
+		{
+			const std::uint32_t what = settings::start::bloodOnTheIce;
+			if (what == settings::start::kBotiLeave)
+			{
+				logger::info("Blood on the Ice: left alone (uBloodOnTheIce=0); the Butcher's clutter stays until the case is closed");
+				return;
+			}
+			auto* quest = Vanilla<RE::TESQuest>(hjerim::kBloodOnTheIce);
+			if (!quest)
+			{
+				logger::error("Blood on the Ice: quest {:08X} is not in the game", hjerim::kBloodOnTheIce);
+				if (a_report.problem.empty()) { a_report.problem = "Blood on the Ice is missing from the game"; }
+				return;
+			}
+			auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+			auto* policy = vm ? vm->GetObjectHandlePolicy() : nullptr;
+			const RE::VMHandle handle = policy ? policy->GetHandleForObject(RE::FormType::Quest, quest) : 0;
+			if (handle == 0)
+			{
+				logger::error("Blood on the Ice: the Papyrus virtual machine is not available");
+				if (a_report.problem.empty()) { a_report.problem = "the Papyrus virtual machine is not available"; }
+				return;
+			}
+			const char* const fn = (what == settings::start::kBotiComplete) ? "CompleteQuest" : "Stop";
+			auto args = RE::MakeFunctionArguments();
+			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+			const bool ok = vm->DispatchMethodCall(handle, RE::BSFixedString("Quest"), RE::BSFixedString(fn), args, callback);
+			a_report.bloodOnTheIce = ok;
+			logger::info("Blood on the Ice: Quest.{}() {} (completed={} enabled={} stage={})", fn,
+						 ok ? "dispatched" : "NOT dispatched (the script call was refused)",
+						 quest->IsCompleted(), quest->IsEnabled(), quest->GetCurrentStageID());
+			if (!ok && a_report.problem.empty())
+			{
+				a_report.problem = std::format("Blood on the Ice could not be {}",
+											   what == settings::start::kBotiComplete ? "completed" : "stopped");
+			}
+			// Its evidence is the Butcher's clutter; with the case settled the house is simply clean, which is
+			// what the steward's own clean-up leaves behind.
+			DisableMarker(hjerim::kKillerClutter, "the Butcher's mess");
+		}
+
 		// Game.IncrementStat("Houses Owned") - the one thing PurchaseHouse does that has no C++ handle.
 		void CountTheHouse()
 		{
@@ -234,6 +281,7 @@ namespace start
 
 			DisableMarker(hjerim::kAbandonedClutter, "the abandoned clutter");
 			EnableMarker(hjerim::kPlayerChest, "the player's chest");
+			SettleBloodOnTheIce(a_report);
 		}
 
 		void RunNow(std::string a_reason)
@@ -337,8 +385,9 @@ namespace start
 			g_ranInThisGame.store(true);
 
 			std::scoped_lock l(g_lock);
-			logger::info("start ({}): finished - moved={} owned={} key={} guide={} scriptVar={} rooms={}/{}{}",
+			logger::info("start ({}): finished - moved={} owned={} key={} guide={} scriptVar={} bloodOnTheIce={} rooms={}/{}{}",
 						 a_reason, g_report.moved, g_report.owned, g_report.keyGiven, g_report.guideGiven, g_report.scriptVarSet,
+						 g_report.bloodOnTheIce,
 						 g_report.roomsFurnished, settings::start::furnishEveryRoom ? hjerim::kRoomCount : 0,
 						 g_report.problem.empty() ? "" : std::format(" (problem: {})", g_report.problem));
 		}
@@ -600,7 +649,7 @@ namespace start
 			"\"ourQuest\":{{\"formID\":\"{:08X}\",\"enabled\":{},\"stopped\":{}}},"
 			"\"house\":{{\"cell\":\"{:08X}\",\"owner\":\"{}\",\"ownedByPlayerFaction\":{},\"abandonedClutterEnabled\":{},\"killerClutterEnabled\":{},\"rooms\":[{}]}},"
 			"\"bloodOnTheIce\":{{\"formID\":\"{:08X}\",\"enabled\":{},\"completed\":{},\"stage\":{}}},"
-			"\"lastRun\":{{\"ran\":{},\"reason\":\"{}\",\"moved\":{},\"owned\":{},\"keyGiven\":{},\"guideGiven\":{},\"scriptVarSet\":{},\"roomsFurnished\":{},\"problem\":\"{}\"}}",
+			"\"lastRun\":{{\"ran\":{},\"reason\":\"{}\",\"moved\":{},\"owned\":{},\"keyGiven\":{},\"guideGiven\":{},\"scriptVarSet\":{},\"bloodOnTheIceSettled\":{},\"roomsFurnished\":{},\"problem\":\"{}\"}}",
 			g_chosen.load() ? "true" : "false", g_ranInThisGame.load() ? "true" : "false",
 			g_questID, ours && ours->IsEnabled() ? "true" : "false", ours && ours->IsStopped() ? "true" : "false",
 			hjerim::kHjerimCell, owner ? owner->GetFormEditorID() : "", owner && owner->GetFormID() == hjerim::kPlayerFaction ? "true" : "false",
@@ -609,6 +658,7 @@ namespace start
 			ms11 ? ms11->GetCurrentStageID() : 0,
 			g_report.ran ? "true" : "false", JsonText(g_report.reason), g_report.moved ? "true" : "false",
 			g_report.owned ? "true" : "false", g_report.keyGiven ? "true" : "false", g_report.guideGiven ? "true" : "false",
-			g_report.scriptVarSet ? "true" : "false", g_report.roomsFurnished, JsonText(g_report.problem));
+			g_report.scriptVarSet ? "true" : "false", g_report.bloodOnTheIce ? "true" : "false",
+			g_report.roomsFurnished, JsonText(g_report.problem));
 	}
 }

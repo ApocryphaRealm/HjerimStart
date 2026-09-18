@@ -36,6 +36,7 @@ namespace start
 		bool keyGiven = false;
 		bool guideGiven = false;
 		bool scriptVarSet = false;
+		bool bloodOnTheIce = false;  // the murder investigation was completed or stopped, as the setting says
 		int roomsFurnished = 0;
 		std::string problem;  // empty when everything asked for actually happened
 	};

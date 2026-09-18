@@ -42,6 +42,16 @@ namespace settings
 	{
 		inline bool moveToHjerim = true;               // bMoveToHjerim:Start
 		inline bool furnishEveryRoom = true;           // bFurnishEveryRoom:Start
+
+		// uBloodOnTheIce:Start - what the start does about the murder investigation this house belongs to
+		// (the owner, 2026-09-18: "hjerim should either deactivate the blood on the ice quest or set it as
+		// complete"). 0 leaves it alone and the Butcher's clutter stays until the case is closed the usual
+		// way; 1 marks it complete, which is the state the game itself reaches when the case is closed and
+		// is what makes the house sellable in vanilla; 2 stops it, the lighter touch - nothing is claimed in
+		// the journal, but a Windhelm trigger could start it again. Either of 1 and 2 clears the clutter.
+		inline constexpr std::uint32_t kBotiLeave = 0, kBotiComplete = 1, kBotiStop = 2;
+		inline std::uint32_t bloodOnTheIce = kBotiComplete;
+
 		inline bool cleanUpAfterBloodOnTheIce = true;  // bCleanUpAfterBloodOnTheIce:Start
 	}
 

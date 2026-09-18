@@ -4,6 +4,7 @@
 
 #include "SKSEMenuFramework.h"
 
+#include "ApMenu.h"
 #include "Hjerim.h"
 #include "Settings.h"
 #include "Start.h"
@@ -21,6 +22,10 @@ namespace UI
 	namespace
 	{
 		std::string statusMessage;
+
+		constexpr const char* kBotiKeys[]{ "HJS_BotiLeave", "HJS_BotiComplete", "HJS_BotiStop" };
+		constexpr const char* kBotiEnglish[]{ "Leave it alone", "Mark it solved", "Turn it off" };
+		constexpr int kBotiCount{ 3 };
 
 		constexpr const char* kLogLevelKeys[]{ "HJS_LogTrace", "HJS_LogDebug", "HJS_LogInfo", "HJS_LogWarning", "HJS_LogError", "HJS_LogCritical", "HJS_LogOff" };
 		constexpr const char* kLogLevelEnglish[]{ "Trace", "Debug", "Info", "Warning", "Error", "Critical", "Off" };
@@ -121,9 +126,23 @@ namespace UI
 										   "and basement lights - everything the steward sells, in one go. Off gives the house with its "
 										   "basic furnishing only, as the sale itself does."));
 
+		const char* boti[kBotiCount];
+		for (int i = 0; i < kBotiCount; ++i) { boti[i] = strings::TR(kBotiKeys[i], kBotiEnglish[i]); }
+		int botiChoice{ static_cast<int>(settings::start::bloodOnTheIce) };
+		if (ImGuiMCP::Combo(strings::TR("HJS_Boti", "Blood on the Ice"), &botiChoice, boti, kBotiCount))
+		{
+			settings::start::bloodOnTheIce = static_cast<std::uint32_t>(std::clamp(botiChoice, 0, kBotiCount - 1));
+		}
+		Help(strings::TR("HJS_HelpBoti", "Hjerim is the Butcher's house, and vanilla only sells it once that murder case is closed. "
+										 "\"Mark it solved\" puts the case in the state the game itself reaches when it is closed, which is "
+										 "what makes the house yours to own; \"Turn it off\" stops the quest instead, claiming nothing in "
+										 "your journal. Either clears the grisly clutter in the hidden room. \"Leave it alone\" plays the "
+										 "case as usual - the clutter stays until you solve it."));
+
 		ImGuiMCP::Toggle(strings::TR("HJS_CleanUp", "Clear the Butcher's mess once Blood on the Ice is solved"), &settings::start::cleanUpAfterBloodOnTheIce);
-		Help(strings::TR("HJS_HelpCleanUp", "The hidden room's grisly clutter is the quest's evidence, so it stays until the case is closed. "
-										   "Then it goes, as the steward's clean-up would have removed it. Off leaves it for the steward."));
+		Help(strings::TR("HJS_HelpCleanUp", "Only matters when the case is left alone above: the hidden room's grisly clutter is the quest's "
+										   "evidence, so it stays until the case is closed, then goes as the steward's clean-up would have "
+										   "removed it. Off leaves it for the steward."));
 
 		ImGuiMCP::Spacing();
 		ImGuiMCP::SeparatorText(strings::TR("HJS_SecTiming", "Timing"));
@@ -221,6 +240,15 @@ namespace UI
 		}
 		ImGuiMCP::Text(strings::TR("HJS_InThisGame", "Handed over by this mod in this game: %s"),
 					   start::StartRanInThisGame() ? strings::TR("HJS_Yes", "yes") : strings::TR("HJS_No", "no"));
+
+		// Where the option ended up: it is added to Alternate Perspective's own "My own home" card when its
+		// menu opens, so until the player has opened that menu there is nothing to report.
+		const auto& menu = apmenu::Last();
+		const char* where = menu.injected    ? strings::TR("HJS_MenuInHome", "in Alternate Perspective's \"My own home\" card")
+						  : menu.ownCardAdded ? strings::TR("HJS_MenuOwnCard", "as a card of its own (this Alternate Perspective has no \"My own home\" card)")
+						  : menu.sawMenu      ? strings::TR("HJS_MenuFailed", "NOT added - see the log")
+											  : strings::TR("HJS_MenuUnseen", "not yet - open the Messenger's menu once");
+		ImGuiMCP::TextWrapped(strings::TR("HJS_MenuState", "The start option: %s"), where);
 
 		ImGuiMCP::Spacing();
 		ImGuiMCP::SeparatorText(strings::TR("HJS_SecRunNow", "Run it now"));

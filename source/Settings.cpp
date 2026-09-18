@@ -30,6 +30,7 @@ namespace settings
 			float stageGapSeconds;
 			bool moveToHjerim;
 			bool furnishEveryRoom;
+			std::uint32_t bloodOnTheIce;
 			bool cleanUpAfterBloodOnTheIce;
 		} defaults{};
 
@@ -115,14 +116,16 @@ namespace settings
 			get("fstagegapseconds:general", general::stageGapSeconds, ParseFloat);
 			get("bmovetohjerim:start", start::moveToHjerim, ParseBool);
 			get("bfurnisheveryroom:start", start::furnishEveryRoom, ParseBool);
+			get("ubloodontheice:start", start::bloodOnTheIce, ParseUInt);
 			get("bcleanupafterbloodontheice:start", start::cleanUpAfterBloodOnTheIce, ParseBool);
+			start::bloodOnTheIce = std::clamp<std::uint32_t>(start::bloodOnTheIce, 0u, 2u);
 
 			general::startDelaySeconds = std::clamp(general::startDelaySeconds, 0.0f, 30.0f);
 			general::stageGapSeconds = std::clamp(general::stageGapSeconds, 0.0f, 5.0f);
 
-			logger::info("settings loaded from {}: enabled={} delay={:.2f}s stageGap={:.2f}s move={} furnish={} cleanUp={} logLevel={}{}",
+			logger::info("settings loaded from {}: enabled={} delay={:.2f}s stageGap={:.2f}s move={} furnish={} bloodOnTheIce={} cleanUp={} logLevel={}{}",
 						 iniPath, general::enabled, general::startDelaySeconds, general::stageGapSeconds, start::moveToHjerim,
-						 start::furnishEveryRoom, start::cleanUpAfterBloodOnTheIce,
+						 start::furnishEveryRoom, start::bloodOnTheIce, start::cleanUpAfterBloodOnTheIce,
 						 debug::logLevel, bad ? std::format(" ({} bad line(s) ignored)", bad) : "");
 			return true;
 		}
@@ -171,7 +174,7 @@ namespace settings
 		iniPath = (std::filesystem::current_path() / "Data" / "SKSE" / "Plugins" / a_iniFileName).string();
 
 		defaults = { debug::logLevel, general::enabled, general::startDelaySeconds, general::stageGapSeconds,
-					 start::moveToHjerim, start::furnishEveryRoom, start::cleanUpAfterBloodOnTheIce };
+					 start::moveToHjerim, start::furnishEveryRoom, start::bloodOnTheIce, start::cleanUpAfterBloodOnTheIce };
 
 		auto* collection = utils::INISettingCollection::GetSingleton();
 		collection->AddSettings(
@@ -181,6 +184,7 @@ namespace settings
 			utils::MakeSetting("fStageGapSeconds:General", general::stageGapSeconds),
 			utils::MakeSetting("bMoveToHjerim:Start", start::moveToHjerim),
 			utils::MakeSetting("bFurnishEveryRoom:Start", start::furnishEveryRoom),
+			utils::MakeSetting("uBloodOnTheIce:Start", static_cast<unsigned int>(start::bloodOnTheIce)),
 			utils::MakeSetting("bCleanUpAfterBloodOnTheIce:Start", start::cleanUpAfterBloodOnTheIce));
 
 		LoadFileValues();
@@ -225,6 +229,7 @@ namespace settings
 		WriteKey(lines, "General", "fStageGapSeconds", std::format("{:.2f}", general::stageGapSeconds));
 		WriteKey(lines, "Start", "bMoveToHjerim", start::moveToHjerim ? "1" : "0");
 		WriteKey(lines, "Start", "bFurnishEveryRoom", start::furnishEveryRoom ? "1" : "0");
+		WriteKey(lines, "Start", "uBloodOnTheIce", std::to_string(start::bloodOnTheIce));
 		WriteKey(lines, "Start", "bCleanUpAfterBloodOnTheIce", start::cleanUpAfterBloodOnTheIce ? "1" : "0");
 
 		std::ofstream out(iniPath, std::ios::binary | std::ios::trunc);
@@ -243,6 +248,7 @@ namespace settings
 		general::stageGapSeconds = defaults.stageGapSeconds;
 		start::moveToHjerim = defaults.moveToHjerim;
 		start::furnishEveryRoom = defaults.furnishEveryRoom;
+		start::bloodOnTheIce = defaults.bloodOnTheIce;
 		start::cleanUpAfterBloodOnTheIce = defaults.cleanUpAfterBloodOnTheIce;
 		ApplyLogLevel();
 		logger::info("settings restored to the shipped defaults");

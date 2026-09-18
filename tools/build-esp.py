@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-r"""Author Alternate Perspective Hjerim Start.esp.
+r"""Author Alternate Perspective Hjerim Addon.esp.
 
 There is no Creation Kit on this machine and this plugin does not need one: it holds exactly ONE
 record, and it exists only so Alternate Perspective has something to name in its menu and something
@@ -18,7 +18,7 @@ nothing happens until Alternate Perspective starts it; the DLL stops it again as
 sequence has run.
 
 FormID note: the plugin declares one master, so its own record takes on-disk index 01 and the record
-is 0x01000800. Alternate Perspective is given "0x800" in the JSON, because it calls
+is 0x01000800. Alternate Perspective is handed "0x800" when the option is added to its menu, because it calls
 Game.GetFormFromFile, which takes the FormID without the plugin's index.
 
 Usage:  python build-esp.py [out.esp]
@@ -28,7 +28,7 @@ import struct
 import sys
 
 AUTHOR = "ApocryphaRealm"
-DESCRIPTION = "Alternate Perspective Hjerim Start"
+DESCRIPTION = "Alternate Perspective Hjerim Addon"
 
 FORM_VERSION = 44  # SSE
 
@@ -98,5 +98,5 @@ def main(out_path: str) -> int:
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
-    default = os.path.join(here, "..", "dist", "Alternate Perspective Hjerim Start.esp")
+    default = os.path.join(here, "..", "dist", "Alternate Perspective Hjerim Addon.esp")
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.normpath(default)))

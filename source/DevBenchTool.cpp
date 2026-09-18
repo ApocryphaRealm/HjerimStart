@@ -3,6 +3,7 @@
 #include "DevBenchTool.h"
 
 #include "DevBench/DevBenchAPI.h"
+#include "ApMenu.h"
 #include "Hjerim.h"
 #include "Settings.h"
 #include "Start.h"
@@ -91,13 +92,13 @@ namespace DevBenchTool
 		std::string StateJson()
 		{
 			return std::format(
-				"{{\"ok\":true,\"op\":\"state\",\"mod\":\"{}\",\"plugin\":\"{}\",{},"
+				"{{\"ok\":true,\"op\":\"state\",\"mod\":\"{}\",\"plugin\":\"{}\",{},{},"
 				"\"settings\":{{\"enabled\":{},\"startDelaySeconds\":{:.2f},\"stageGapSeconds\":{:.2f},\"moveToHjerim\":{},"
-				"\"furnishEveryRoom\":{},\"cleanUpAfterBloodOnTheIce\":{},\"logLevel\":{}}}}}",
-				EscapeJson(hjerim::kDisplayName), hjerim::kPluginName, start::StateJson(),
+				"\"furnishEveryRoom\":{},\"bloodOnTheIce\":{},\"cleanUpAfterBloodOnTheIce\":{},\"logLevel\":{}}}}}",
+				EscapeJson(hjerim::kDisplayName), hjerim::kPluginName, start::StateJson(), apmenu::StateJson(),
 				settings::general::enabled ? "true" : "false", settings::general::startDelaySeconds, settings::general::stageGapSeconds,
 				settings::start::moveToHjerim ? "true" : "false",
-				settings::start::furnishEveryRoom ? "true" : "false",
+				settings::start::furnishEveryRoom ? "true" : "false", settings::start::bloodOnTheIce,
 				settings::start::cleanUpAfterBloodOnTheIce ? "true" : "false", settings::debug::logLevel);
 		}
 
@@ -115,6 +116,29 @@ namespace DevBenchTool
 					return;
 				}
 				a_write(a_sink, std::format("{{\"ok\":{},\"op\":\"run\",{}}}", *ok ? "true" : "false", start::StateJson()).c_str());
+				return;
+			}
+			if (op == "menu")
+			{
+				// The driving tool for this mod's one visible surface: the option inside Alternate Perspective's
+				// menu. AP opens that menu when its Messenger dialogue sends this mod event (APDialoguePlayer
+				// listens for it), so sending it here opens the same menu the player would, and our sink adds
+				// the option to it exactly as it would in play.
+				auto sent = std::make_shared<bool>(false);
+				if (!RunOnMainThread([sent]() {
+						if (auto* source = SKSE::GetModCallbackEventSource())
+						{
+							SKSE::ModCallbackEvent e{ "AP_MessengerMenuOpen", "", 0.0f, nullptr };
+							source->SendEvent(&e);
+							*sent = true;
+						}
+					}))
+				{
+					a_write(a_sink, R"({"ok":false,"op":"menu","error":"main thread did not run the task in time"})");
+					return;
+				}
+				a_write(a_sink, std::format("{{\"ok\":{},\"op\":\"menu\",\"note\":\"AP_MessengerMenuOpen sent; read op=state a second later for what was added\"}}",
+											*sent ? "true" : "false").c_str());
 				return;
 			}
 			if (op == "state")
@@ -157,6 +181,7 @@ namespace DevBenchTool
 				if (name == "enabled") { settings::general::enabled = on; }
 				else if (name == "moveToHjerim") { settings::start::moveToHjerim = on; }
 				else if (name == "furnishEveryRoom") { settings::start::furnishEveryRoom = on; }
+				else if (name == "bloodOnTheIce") { try { settings::start::bloodOnTheIce = static_cast<std::uint32_t>(std::stoul(value)); } catch (...) { known = false; } }
 				else if (name == "cleanUpAfterBloodOnTheIce") { settings::start::cleanUpAfterBloodOnTheIce = on; }
 				else if (name == "startDelaySeconds") { try { settings::general::startDelaySeconds = std::stof(value); } catch (...) { known = false; } }
 				else if (name == "stageGapSeconds") { try { settings::general::stageGapSeconds = std::stof(value); } catch (...) { known = false; } }
@@ -200,7 +225,10 @@ namespace DevBenchTool
 			"abandoned and Butcher clutter states, and Blood on the Ice's stage. op=run: run the whole start now - move "
 			"the player into Hjerim, hand the house over (deed, key, guide, script variable) and furnish every room - "
 			"without going through Alternate Perspective's menu. op=set with name (enabled, moveToHjerim, "
-			"furnishEveryRoom, cleanUpAfterBloodOnTheIce, startDelaySeconds, stageGapSeconds) and value: change one "
+			"furnishEveryRoom, bloodOnTheIce (0 leave / 1 complete / 2 stop), cleanUpAfterBloodOnTheIce, "
+			"startDelaySeconds, stageGapSeconds) and value: change one "
+			"setting for this session. op=menu opens Alternate Perspective's own menu (the mod event its Messenger sends), "
+			"which is how the option this mod adds to AP's \"My own home\" card can be seen. "
 			"setting for this session. op=save writes the settings to the INI; op=reload re-reads it.\","
 			"\"inputSchema\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"value\":{\"type\":\"string\"}}},"
 			"\"readOnly\":false"

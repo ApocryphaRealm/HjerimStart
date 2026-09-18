@@ -1,4 +1,20 @@
-# Alternate Perspective Hjerim Start - changelog
+﻿# Alternate Perspective Hjerim Addon - changelog
+
+## 1.0.1 - 2026-09-18 - untested
+
+### Changed
+- **The mod is Alternate Perspective Hjerim Addon** (the owner, 2026-09-18). The plugin is
+  `Alternate Perspective Hjerim Addon.esp`; the DLL, INI and log keep the `HjerimStart` name they load under.
+- **The option lives in Alternate Perspective's own "My own home" card**, beside Whiterun, Solitude, Riften and
+  Markarth - the four houses vanilla lets you own without a quest (the owner: *"it needs its selection option added to
+  the my own home area of alt perspective in the starting room"*). AP pushes every add-on file's entries into one list
+  and merges nothing, so a JSON of our own could only ever be a separate card; this build ships no JSON and adds the
+  option to that card in the menu itself when it opens, in your language. If a future AP has no such card, the start is
+  added as a card of its own instead, and the settings page's Status tab says which happened.
+- **Blood on the Ice is settled by the start** (the owner: *"hjerim should either deactivate the blood on the ice quest
+  or set it as complete"*). New setting `uBloodOnTheIce`: mark it solved (the default - the state the game itself
+  reaches when the case is closed, which is what makes the house ownable), turn it off, or leave it alone and play the
+  case as usual. The first two also clear the grisly clutter in the hidden room, so the house you arrive in is clean.
 
 ## 1.0.0 - 2026-09-18 - untested
 

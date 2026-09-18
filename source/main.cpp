@@ -1,20 +1,22 @@
-// Alternate Perspective Hjerim Start. Own code, GPL-3.0-or-later (2026-09-18).
+// Alternate Perspective Hjerim Addon. Own code, GPL-3.0-or-later (2026-09-18).
 //
-// An add-on for Alternate Perspective (Nexus 50307). It adds one start to AP's menu in the Resting
-// Pilgrim - Hjerim, the house in Windhelm, already the player's: deed, key and every room furnished.
+// An add-on for Alternate Perspective (Nexus 50307). It adds Hjerim - the house in Windhelm, already
+// the player's, deed, key and every room furnished - to AP's own "My own home" card, beside the four
+// houses vanilla lets you own without a quest.
 //
-// Three pieces make that work, and only one of them is code:
-//   * Alternate Perspective Hjerim Start.esp - one quest record. It exists so AP has something to name
+// Two pieces make that work, and only one of them is code:
+//   * Alternate Perspective Hjerim Addon.esp - one quest record. It exists so AP has something to name
 //     and start; it holds no script and no aliases.
-//   * SKSE\AlternatePerspective\HjerimStart.json - the registration AP reads. Its format is AP 4.0's
-//     own schema, shipped at SKSE\AlternatePerspective\Schema\schema.json.
-//   * This DLL - it watches for that quest starting and does the work, through the same markers,
-//     script variable and cell owner the steward's own dialogue uses.
+//   * This DLL - it adds the option to AP's menu when the menu opens (ApMenu.cpp; AP merges nothing
+//     between add-on files, so a JSON of our own could only ever be a separate card), then watches for
+//     that quest starting and does the work, through the same markers, script variable and cell owner
+//     the steward's own dialogue uses.
 //
 // No vanilla record is edited and no game file is replaced, so removing the mod removes it entirely,
 // and a mod that refurnishes or improves Hjerim sees exactly what it would see after a vanilla purchase.
 #include "PCH.h"
 
+#include "ApMenu.h"
 #include "DevBenchTool.h"
 #include "Hjerim.h"
 #include "Settings.h"
@@ -43,6 +45,7 @@ namespace
 			// Forms exist from here on, which is the earliest our own quest can be looked up.
 			strings::Configure(hjerim::kTranslationStem);
 			start::Install();
+			apmenu::Install();
 			DevBenchTool::Init(true);
 			break;
 		case SKSE::MessagingInterface::kNewGame:
