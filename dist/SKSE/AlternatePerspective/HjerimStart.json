@@ -1,0 +1,9 @@
+[
+  {
+    "mod": "Alternate Perspective Hjerim Start.esp",
+    "text": "$HJS_Card",
+    "description": "$HJS_CardDescr",
+    "color": "0x5B6D7A",
+    "id": "0x800"
+  }
+]
