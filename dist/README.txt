@@ -1,6 +1,6 @@
 Alternate Perspective Hjerim Start
 ==================================
-Version 1.0.0
+Version 1.0.1
 
 An add-on for Alternate Perspective. It adds a "Hjerim" card to the menu the Messenger offers you in
 the Resting Pilgrim. Choose it and the game begins inside Hjerim, the house in Windhelm, already
@@ -34,7 +34,8 @@ REQUIREMENTS
   Alternate Perspective - Alternate Start 4.0 or newer
   JContainers SE - Alternate Perspective's own requirement; without it AP shows only its own starts
 
-  Supported runtimes: Skyrim SE 1.5.97 and AE 1.6.1170 (this build). Skyrim 1.7.x has its own build.
+  Supported runtimes: Skyrim SE 1.5.97, AE 1.6.1170, and Skyrim 1.7.99 / 1.7.104 - the installer asks
+  which one you have and installs the matching DLL.
 
   Optional: the Apocrypha Menu Framework (or SKSE Menu Framework), which is where this mod's settings
   page appears. Without one the mod reads its INI and works the same; it simply has no page.
@@ -42,7 +43,7 @@ REQUIREMENTS
 
 INSTALLATION
 ------------
-  Install with a mod manager and enable the plugin. Load order does not matter - nothing in this mod
+  Install with a mod manager, pick your game version in the installer, and enable the plugin. Load order does not matter - nothing in this mod
   overrides anything.
 
   The start appears in Alternate Perspective's menu on the next new game.
@@ -77,6 +78,14 @@ IF SOMETHING GOES WRONG
   "A room is not furnished."                 Another mod has removed or replaced that room's vanilla
                                             furnishing marker; the log names it. That mod's own
                                             furniture is what you see, which is the intended result.
+
+
+WHAT CHANGED
+------------
+Version 1.0.1
+The mod is named Alternate Perspective Hjerim Addon, and its plugin with it.
+The option now sits inside Alternate Perspective's own "My own home" card, beside Whiterun, Solitude, Riften and Markarth, instead of being a card of its own. It is added to that card as the menu opens, in your language; no file of Alternate Perspective's is touched, and if a future version has no such card the start appears as its own card instead.
+The start settles Blood on the Ice: marked solved by default (the state the game itself reaches when the case is closed), or turned off, or left alone to play as usual - a new setting on the page and in the INI. The first two also clear the grisly clutter in the hidden room.
 
 
 LICENCE

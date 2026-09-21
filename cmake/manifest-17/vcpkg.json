@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "hjerimstart-17",
-  "version-string": "1.0.0",
+  "version-string": "1.0.1",
   "description": "Alternate Perspective Hjerim Addon. Begin in Hjerim, the house in Windhelm, already yours - deed, key and every room furnished. [Skyrim 1.7.x build line: CommonLibSSE-NG 7.2.0, cmake/ports-17]",
   "homepage": "https://github.com/ApocryphaRealm/HjerimStart",
   "license": "GPL-3.0-or-later",
