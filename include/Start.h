@@ -21,12 +21,11 @@ namespace start
 	void OnGameBegun();
 
 	// Run the sequence now. Called by the quest-start listener after the configured delay, and by the
-	// DevBench tool and the settings page so the whole thing can be exercised without going through the
-	// menu. Returns false when it could not run at all (no player, disabled in the settings); a step that
+	// DevBench tool so the whole thing can be exercised without going through the menu. Returns false when it could not run at all (no player, disabled in the settings); a step that
 	// is switched off is not a failure.
 	bool Run(const char* a_reason);
 
-	// What the last run did, for the settings page and the DevBench tool.
+	// What the last run did, for the log and the DevBench tool.
 	struct Report
 	{
 		bool ran = false;
@@ -44,7 +43,7 @@ namespace start
 	const Report& LastRun();
 
 	// True once our quest has been seen to start in this session - i.e. the player really did pick this
-	// start. The settings page says so, because "nothing happened" and "you did not choose this start"
+	// start. The DevBench state says so, because "nothing happened" and "you did not choose this start"
 	// look identical from the player's side otherwise.
 	bool WasChosen();
 

@@ -3,8 +3,9 @@
 // Settings for Alternate Perspective Hjerim Start. Plain-file INI beside the DLL (the project
 // standard: redirector-proof, and readable by a player without a mod manager).
 //
-// Every value here is also a control on the mod's Apocrypha Menu Framework page, and every compiled
-// default below is the value the shipped INI carries (rule 16) - pre-finalize-check compares them.
+// There is no in-game page (the owner, 2026-10-02: Alternate Perspective add-ons are simple mods with no
+// AMF page); the INI is the only place these are set. Every compiled default below is the value the
+// shipped INI carries (rule 16) - pre-finalize-check compares them.
 
 #include <cstdint>
 #include <string>
@@ -18,8 +19,8 @@ namespace settings
 
 	namespace general
 	{
-		// bEnabled:General - with this off the start still appears in Alternate Perspective's menu (the
-		// card is AP's, read from our JSON before the game runs) but choosing it does nothing, leaving
+		// bEnabled:General - with this off the start still appears in Alternate Perspective's menu (it is
+		// added to AP's "My own Home" card when the menu opens) but choosing it does nothing, leaving
 		// the player in the Resting Pilgrim. It exists so the start can be switched off without
 		// uninstalling mid-playthrough.
 		inline bool enabled = true;
@@ -58,7 +59,6 @@ namespace settings
 	void Init(const std::string& a_iniFileName);
 	bool Reload();
 	bool Save();
-	void RestoreDefaults();
 	void ApplyLogLevel();
 	const std::string& GetIniPath();
 }

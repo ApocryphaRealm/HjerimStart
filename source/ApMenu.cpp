@@ -41,15 +41,21 @@ namespace apmenu
 			return s ? s : std::string{};
 		}
 
+		// The sub-choice is labelled with the city, like AP's own Whiterun / Solitude / Riften / Markarth
+		// beside it (the owner, 2026-10-13: Hjerim is "Windhelm" in that card). AP's suboptions carry no
+		// description line, so the house's name only appears on the fallback card of our own.
+		const char* SubChoiceText() { return strings::TR("HJS_Card", "Windhelm"); }
+		const char* OwnCardText() { return strings::TR("HJS_OwnCard", "Hjerim"); }
+
 		// One suboption, shaped exactly like AP's own: the text the player reads, the quest's FormID
 		// WITHOUT the plugin index (AP calls Game.GetFormFromFile with it), and the plugin that owns it -
 		// a suboption without `mod` inherits the card's, which here would be AP's own ESP.
-		bool MakeOurOption(RE::GFxMovieView* a_movie, RE::GFxValue& a_out)
+		bool MakeOurOption(RE::GFxMovieView* a_movie, RE::GFxValue& a_out, const char* a_text)
 		{
 			a_movie->CreateObject(&a_out);
 			if (!a_out.IsObject()) { return false; }
 			RE::GFxValue text, mod, id;
-			a_movie->CreateString(&text, strings::TR("HJS_Card", "Hjerim"));
+			a_movie->CreateString(&text, a_text);
 			a_movie->CreateString(&mod, hjerim::kPluginName);
 			id.SetNumber(static_cast<double>(hjerim::kStartQuestLocalID));
 			return a_out.SetMember("text", text) && a_out.SetMember("id", id) && a_out.SetMember("mod", mod);
@@ -73,7 +79,7 @@ namespace apmenu
 		bool AddOwnCard(RE::GFxMovieView* a_movie, RE::GFxValue& a_options, std::string& a_problem)
 		{
 			RE::GFxValue card;
-			if (!MakeOurOption(a_movie, card))
+			if (!MakeOurOption(a_movie, card, OwnCardText()))
 			{
 				a_problem = "the movie would not make an object";
 				return false;
@@ -128,8 +134,8 @@ namespace apmenu
 			g_running.store(false);
 			if (a_report.injected)
 			{
-				logger::info("menu: added \"{}\" to Alternate Perspective's \"My own home\" card ({} card(s), {} pass(es))",
-							 strings::TR("HJS_Card", "Hjerim"), a_report.cards, a_report.passes);
+				logger::info("menu: added \"{}\" (Hjerim) to Alternate Perspective's \"My own home\" card ({} card(s), {} pass(es))",
+							 SubChoiceText(), a_report.cards, a_report.passes);
 			}
 			else if (a_report.ownCardAdded)
 			{
@@ -187,7 +193,7 @@ namespace apmenu
 					return;
 				}
 				RE::GFxValue option;
-				if (!MakeOurOption(movie.get(), option))
+				if (!MakeOurOption(movie.get(), option, SubChoiceText()))
 				{
 					r.problem = "the movie would not make an object";
 					break;

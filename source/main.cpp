@@ -21,7 +21,6 @@
 #include "Hjerim.h"
 #include "Settings.h"
 #include "Start.h"
-#include "UI.h"
 
 #include "utils/AddressLibraryGuard.h"
 #include "utils/Logger.h"
@@ -35,11 +34,6 @@ namespace
 		{
 		case SKSE::MessagingInterface::kPostLoad:
 			DevBenchTool::Init(false);
-			break;
-		case SKSE::MessagingInterface::kPostPostLoad:
-			// The menu framework is another SKSE plugin, so its exports are only reliably there once
-			// every plugin has loaded.
-			UI::Register();
 			break;
 		case SKSE::MessagingInterface::kDataLoaded:
 			// Forms exist from here on, which is the earliest our own quest can be looked up.

@@ -19,7 +19,7 @@ namespace apmenu
 	// Start listening for AP's menu opening. Called at kDataLoaded; safe to call twice.
 	void Install();
 
-	// What the last attempt did, for the settings page and the DevBench tool.
+	// What the last attempt did, for the DevBench tool.
 	struct Report
 	{
 		bool sawMenu = false;       // AP's option array was found in the movie

@@ -1,4 +1,12 @@
-﻿# Alternate Perspective Hjerim Addon - changelog
+# Alternate Perspective Hjerim Addon - changelog
+
+## 1.0.2 - 2026-10-13 - untested
+
+### Changed
+- **The option in Alternate Perspective's "My own Home" card is called Windhelm**, like Whiterun, Solitude, Riften and Markarth beside it, instead of Hjerim (the owner, 2026-10-13). AP's suboptions carry no description line, so the house is named only on the fallback card of our own, which keeps the Hjerim label.
+
+### Removed
+- **No in-game menu page.** The Apocrypha Menu Framework page (Settings and Status) is gone; the mod simply adds the start (the owner, 2026-10-02: Alternate Perspective mods "should just be a simple mod that adds what is intended and not an AMF page"). Every setting is still in `HjerimStart.ini` and is read the same way; the page-only text is gone from the translation files.
 
 ## 1.0.1 - 2026-09-18 - untested
 

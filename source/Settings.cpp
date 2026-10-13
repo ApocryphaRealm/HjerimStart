@@ -22,18 +22,6 @@ namespace settings
 	{
 		std::string iniPath;
 
-		struct Defaults
-		{
-			std::uint32_t logLevel;
-			bool enabled;
-			float startDelaySeconds;
-			float stageGapSeconds;
-			bool moveToHjerim;
-			bool furnishEveryRoom;
-			std::uint32_t bloodOnTheIce;
-			bool cleanUpAfterBloodOnTheIce;
-		} defaults{};
-
 		std::string Lower(std::string a_s)
 		{
 			for (char& c : a_s) { c = static_cast<char>(std::tolower(static_cast<unsigned char>(c))); }
@@ -173,9 +161,6 @@ namespace settings
 	{
 		iniPath = (std::filesystem::current_path() / "Data" / "SKSE" / "Plugins" / a_iniFileName).string();
 
-		defaults = { debug::logLevel, general::enabled, general::startDelaySeconds, general::stageGapSeconds,
-					 start::moveToHjerim, start::furnishEveryRoom, start::bloodOnTheIce, start::cleanUpAfterBloodOnTheIce };
-
 		auto* collection = utils::INISettingCollection::GetSingleton();
 		collection->AddSettings(
 			utils::MakeSetting("uLogLevel:Debug", static_cast<unsigned int>(debug::logLevel)),
@@ -238,20 +223,6 @@ namespace settings
 		for (const auto& line : lines) { out << line << "\r\n"; }
 		logger::info("settings saved to {}", iniPath);
 		return true;
-	}
-
-	void RestoreDefaults()
-	{
-		debug::logLevel = defaults.logLevel;
-		general::enabled = defaults.enabled;
-		general::startDelaySeconds = defaults.startDelaySeconds;
-		general::stageGapSeconds = defaults.stageGapSeconds;
-		start::moveToHjerim = defaults.moveToHjerim;
-		start::furnishEveryRoom = defaults.furnishEveryRoom;
-		start::bloodOnTheIce = defaults.bloodOnTheIce;
-		start::cleanUpAfterBloodOnTheIce = defaults.cleanUpAfterBloodOnTheIce;
-		ApplyLogLevel();
-		logger::info("settings restored to the shipped defaults");
 	}
 
 	void ApplyLogLevel()
