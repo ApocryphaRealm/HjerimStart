@@ -1,6 +1,6 @@
 # Alternate Perspective Hjerim Addon - changelog
 
-## 1.0.2 - 2026-10-13 - untested
+## 1.0.2 - 2026-10-13 - working
 
 ### Changed
 - **The option in Alternate Perspective's "My own Home" card is called Windhelm**, like Whiterun, Solitude, Riften and Markarth beside it, instead of Hjerim (the owner, 2026-10-13). AP's suboptions carry no description line, so the house is named only on the fallback card of our own, which keeps the Hjerim label.
