@@ -70,7 +70,7 @@ IF SOMETHING GOES WRONG
 -----------------------
   The log is at
   Documents\My Games\Skyrim Special Edition\SKSE\HjerimStart.log
-  and it ships at full detail, so it already contains everything needed.
+  and it ships at info. For a bug report, set uLogLevel=0 in the INI, reproduce, and send the log.
 
   "I arrived back in the Resting Pilgrim."  Raise fStartDelaySeconds a little.
   "I ended up in Helgen."                   Lower it. Alternate Perspective has a safety net that

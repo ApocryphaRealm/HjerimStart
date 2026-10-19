@@ -14,7 +14,7 @@ namespace settings
 {
 	namespace debug
 	{
-		inline std::uint32_t logLevel = 0;  // uLogLevel:Debug - 0 is trace, the shipped default
+		inline std::uint32_t logLevel = 2;  // uLogLevel:Debug - 2 is info, the shipped default (the owner, 2026-09-26)
 	}
 
 	namespace general
