@@ -1,6 +1,6 @@
 # Alternate Perspective Hjerim Addon - changelog
 
-## 1.0.2 - 2026-10-13 - untested
+## 1.0.2 - 2026-10-13 - working
 
 ### Changed
 - **The log ships at info** (uLogLevel=2, compiled and in the INI), the standing default since the owner's 2026-09-26 rule; it shipped at trace. For a bug report, set uLogLevel=0, reproduce, and send the log.
