@@ -7,9 +7,12 @@
 #include "utils/Strings.h"
 
 #include <atomic>
+#include <chrono>
 #include <format>
+#include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 
 namespace apmenu
 {
@@ -111,16 +114,61 @@ namespace apmenu
 			return true;
 		}
 
-		void Pass(int a_pass);
+		// Returns true when this attempt is over (added, fell back, failed, or the menu closed); false to look again.
+		bool Pass(int a_pass);
 
-		void Queue(int a_pass)
+		// 1.0.3: every pass runs as an SKSE UI task - inside the UI's own message processing, the thread AP's movie
+		// advances on. Until 1.0.2 each pass was an AddTask, whose queue on 1.5.97 runs as its own job beside the UI job,
+		// so its GetVariable / GetMember / PushBack on AP's movie raced the movie's own advance (the shape that crashed
+		// Dragon's Eye Minimap 1.7.5). The retries are paced from a short-lived thread of ours, one pass per ~16 ms with
+		// the next posted only after the last has run, because SKSE drains its UI queue in a loop: a UI task that queued
+		// the next pass itself would run all of them in the same frame, before AP had read its files. That thread never
+		// touches Scaleform - it only waits and posts.
+		inline constexpr auto kPassInterval = std::chrono::milliseconds(16);
+		inline constexpr auto kPassRunTimeout = std::chrono::seconds(10);
+
+		void Drive()
 		{
-			if (auto* tasks = SKSE::GetTaskInterface())
+			for (int pass = 1; pass <= kMaxPasses; ++pass)
 			{
-				tasks->AddTask([a_pass]() { Pass(a_pass); });
+				if (pass > 1) { std::this_thread::sleep_for(kPassInterval); }
+
+				auto* tasks = SKSE::GetTaskInterface();
+				if (!tasks)
+				{
+					g_running.store(false);
+					return;
+				}
+
+				// 0 = waiting for the UI to run it, 1 = look again, 2 = over.
+				auto state = std::make_shared<std::atomic<int>>(0);
+				tasks->AddUITask([pass, state]() { state->store(Pass(pass) ? 2 : 1); });
+
+				const auto deadline = std::chrono::steady_clock::now() + kPassRunTimeout;
+				while (state->load() == 0)
+				{
+					if (std::chrono::steady_clock::now() > deadline)
+					{
+						logger::warn("menu: pass {} was not run by the UI within {} s; giving up on this menu", pass,
+									 std::chrono::duration_cast<std::chrono::seconds>(kPassRunTimeout).count());
+						g_running.store(false);
+						return;
+					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				}
+				if (state->load() == 2) { return; }
 			}
-			else
+		}
+
+		void Start()
+		{
+			try
 			{
+				std::thread(Drive).detach();
+			}
+			catch (const std::exception& e)
+			{
+				logger::error("menu: could not start the pass driver ({}); the start will not be added this time", e.what());
 				g_running.store(false);
 			}
 		}
@@ -149,7 +197,7 @@ namespace apmenu
 			}
 		}
 
-		void Pass(int a_pass)
+		bool Pass(int a_pass)
 		{
 			Report r;
 			r.passes = a_pass;
@@ -160,17 +208,17 @@ namespace apmenu
 				// The menu closed under us (the player pressed Tab); nothing to do and nothing wrong.
 				if (a_pass > 1) { logger::debug("menu: it closed before the option list appeared (pass {})", a_pass); }
 				g_running.store(false);
-				return;
+				return true;
 			}
 
 			RE::GFxValue options;
 			const bool have = movie->GetVariable(&options, hjerim::kApOptionsPath) && options.IsArray() && options.GetArraySize() > 0;
 			if (!have)
 			{
-				if (a_pass < kMaxPasses) { Queue(a_pass + 1); return; }
+				if (a_pass < kMaxPasses) { return false; }   // Drive() posts the next pass
 				r.problem = "Alternate Perspective's option list never appeared - is this another mod's custom menu?";
 				Finish(r);
-				return;
+				return true;
 			}
 
 			r.sawMenu = true;
@@ -190,7 +238,7 @@ namespace apmenu
 				{
 					r.injected = true;
 					Finish(r);
-					return;
+					return true;
 				}
 				RE::GFxValue option;
 				if (!MakeOurOption(movie.get(), option, SubChoiceText()))
@@ -205,7 +253,7 @@ namespace apmenu
 				}
 				r.injected = true;
 				Finish(r);
-				return;
+				return true;
 			}
 
 			if (r.problem.empty())
@@ -222,6 +270,7 @@ namespace apmenu
 				r.problem += "; " + fallbackProblem;
 			}
 			Finish(r);
+			return true;
 		}
 
 		class MenuSink : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
@@ -239,7 +288,7 @@ namespace apmenu
 				if (a_event && a_event->opening && a_event->menuName == hjerim::kApMenuName && !g_running.exchange(true))
 				{
 					logger::debug("menu: a custom menu opened; looking for Alternate Perspective's option list");
-					Queue(1);
+					Start();
 				}
 				return RE::BSEventNotifyControl::kContinue;
 			}

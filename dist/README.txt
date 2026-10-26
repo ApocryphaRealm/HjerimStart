@@ -1,6 +1,6 @@
 Alternate Perspective Hjerim Addon
 ==================================
-Version 1.0.2
+Version 1.0.3
 
 An add-on for Alternate Perspective. It adds Windhelm to the "My own Home" card of the menu the
 Messenger offers you in the Resting Pilgrim, beside Whiterun, Solitude, Riften and Markarth. Choose it
@@ -85,6 +85,9 @@ IF SOMETHING GOES WRONG
 
 WHAT CHANGED
 ------------
+Version 1.0.3
+Adding Windhelm to Alternate Perspective's menu now happens on the game's UI thread, so it can no longer collide with the menu drawing itself. What is added, and where, is unchanged.
+
 Version 1.0.2
 The option in the "My own Home" card is called Windhelm, like the other cities beside it.
 No in-game menu page any more: the mod simply adds the start. Every setting is still in the INI.

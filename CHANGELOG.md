@@ -1,5 +1,18 @@
 # Alternate Perspective Hjerim Addon - changelog
 
+## 1.0.3 - 2026-10-25 - untested
+
+### Fixed
+- **Adding the start to Alternate Perspective's menu now talks to the menu only on the UI thread.** Each look at AP's
+  option list (GetVariable / GetMember / PushBack on its movie) was queued through SKSE's AddTask, whose queue on Skyrim
+  1.5.97 runs beside the UI job that advances the menu's movie, so the calls raced the movie itself - the shape that
+  crashed Dragon's Eye Minimap 1.7.5 (2026-10-25). Each pass is now an SKSE UI task. The retries while AP reads its
+  files are paced by a short-lived thread of the mod's, one pass about every 16 ms (300 passes, about five seconds,
+  as before), posting the next only after the last has run - SKSE drains its UI queue in a loop, so a UI task that
+  queued the next pass itself would run them all in one frame. That thread never touches the movie. What is added
+  to the menu, and where, is unchanged. Gate rows scaleform-calls-only-on-the-ui-thread and
+  scaleform-helpers-only-on-the-ui-thread pass.
+
 ## 1.0.2 - 2026-10-13 - working
 
 ### Changed
