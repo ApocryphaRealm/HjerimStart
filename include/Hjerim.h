@@ -99,4 +99,10 @@ namespace hjerim
 	// "case closed" state is; stopping it is the lighter touch. Either way the Butcher's clutter goes,
 	// which is what the steward's own 500-septim clean-up (TIF__000F726C) does.
 	inline constexpr std::uint32_t kBloodOnTheIce = 0x0001F7A3;  // QUST MS11
+
+	// The blood on the main floor: every placed decal the cell has, read out of Skyrim.esm and the
+	// Njordlinger Test list on 2026-11-03. All four are persistent REFRs of TXST
+	// DecalBloodSprayGroundMediumSmall (00018EDE), enable-parented to kKillerClutter. HS Player Homes -
+	// Hjerim moves them and keeps the link; no other plugin on that list touches them.
+	inline constexpr std::uint32_t kBloodDecals[] = { 0x000D5808, 0x000D5809, 0x000D580A, 0x0010FBF8 };
 }

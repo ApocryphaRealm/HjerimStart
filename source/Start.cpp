@@ -8,11 +8,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <format>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <vector>
 
 namespace start
 {
@@ -193,9 +196,136 @@ namespace start
 				a_report.problem = std::format("Blood on the Ice could not be {}",
 											   what == settings::start::kBotiComplete ? "completed" : "stopped");
 			}
-			// Its evidence is the Butcher's clutter; with the case settled the house is simply clean, which is
-			// what the steward's own clean-up leaves behind.
-			DisableMarker(hjerim::kKillerClutter, "the Butcher's mess");
+		}
+
+		// A file path naming blood, in any case. Texture and model paths are all a base form still has at
+		// runtime - editor IDs are not kept on 1.5.97.
+		bool NamesBlood(const char* a_path)
+		{
+			if (!a_path) { return false; }
+			constexpr std::string_view word = "blood";
+			const std::string_view path = a_path;
+			return std::search(path.begin(), path.end(), word.begin(), word.end(), [](char a, char b) {
+				return std::tolower(static_cast<unsigned char>(a)) == b;
+			}) != path.end();
+		}
+
+		// Blood standing in the house that no list of ours can name: another mod's scene. A placed decal is a
+		// reference to a texture set, so its diffuse path says what it paints (Skyrim.esm's blood decals all
+		// live in the Blood textures folder); a prop says so in its model path. Nothing else is looked at, so
+		// a mod's cobwebs and dust stay.
+		bool IsBlood(const RE::TESBoundObject* a_base)
+		{
+			if (!a_base) { return false; }
+			switch (a_base->GetFormType())
+			{
+			case RE::FormType::TextureSet:
+				{
+					const auto* set = a_base->As<RE::BGSTextureSet>();
+					return set && NamesBlood(set->textures[0].textureName.c_str());
+				}
+			case RE::FormType::Static:
+			case RE::FormType::MovableStatic:
+				{
+					const auto* model = a_base->As<RE::TESModel>();
+					return model && NamesBlood(model->GetModel());
+				}
+			default:
+				return false;
+			}
+		}
+
+		// Is this reference hung off an enable marker the start has switched off? Set to the marker's state
+		// directly as well as through the marker, so a child is right whatever the marker's Disable reached.
+		// A child flagged "opposite of parent" comes ON when the marker goes off.
+		enum class Child { kNo, kSame, kOpposite };
+
+		Child ChildOfSwitchedOff(RE::TESObjectREFR* a_ref, bool a_mess)
+		{
+			const auto* link = a_ref->extraList.GetByType<RE::ExtraEnableStateParent>();
+			if (!link) { return Child::kNo; }
+			const auto parent = link->parent.get();
+			if (!parent) { return Child::kNo; }
+			const auto id = parent->GetFormID();
+			if (id != hjerim::kAbandonedClutter && !(a_mess && id == hjerim::kKillerClutter)) { return Child::kNo; }
+			return (link->flags & 1) != 0 ? Child::kOpposite : Child::kSame;
+		}
+
+		// Everything that makes it the Butcher's house rather than the player's. Safe to repeat, and cheap:
+		// after the first pass it finds the refs already off and writes nothing.
+		//
+		// WHY IT RUNS BEFORE THE MOVE. A placed decal is painted onto the geometry around it when its cell
+		// attaches, and it is not part of the reference's own 3D, so switching the reference off while the
+		// player stands there leaves the paint on the floor until the cell next loads. That is how 1.0.3 left
+		// blood behind: its log has the player in Hjerim at 00:08:23.090 and the mess off at 00:08:23.277. The
+		// steward's clean-up never shows this because the buyer is in the palace at the time. All four vanilla
+		// decals are persistent, so they are in memory with the cell unloaded and can be reached from anywhere.
+		//
+		// Disabled state is written to the save by the game itself, so none of this has to re-run after a
+		// load; it runs again on entering the house only to catch references that exist only while the cell is
+		// loaded (the bones, and whatever another mod placed). Those are props, gone at once - a non-persistent
+		// decal of another mod's would stay painted until the next time the cell loads.
+		void ClearTheHouse(const char* a_when, bool a_mess)
+		{
+			DisableMarker(hjerim::kAbandonedClutter, "the abandoned clutter");
+			if (a_mess) { DisableMarker(hjerim::kKillerClutter, "the Butcher's mess"); }
+
+			std::vector<RE::TESObjectREFR*> off;
+			std::vector<RE::TESObjectREFR*> on;
+			if (a_mess)
+			{
+				// By FormID first: a mod may have moved one out of the cell or cut its link to the marker.
+				for (const auto id : hjerim::kBloodDecals)
+				{
+					auto* ref = Vanilla<RE::TESObjectREFR>(id);
+					if (ref && !ref->IsDeleted() && !ref->IsDisabled()) { off.push_back(ref); }
+				}
+			}
+
+			// Collected under the cell's lock and acted on outside it: Disable reaches into other locks.
+			if (auto* cell = Vanilla<RE::TESObjectCELL>(hjerim::kHjerimCell))
+			{
+				cell->ForEachReference([&](RE::TESObjectREFR* a_ref) {
+					if (a_ref && !a_ref->IsDeleted())
+					{
+						const Child child = ChildOfSwitchedOff(a_ref, a_mess);
+						if (child == Child::kOpposite)
+						{
+							if (a_ref->IsDisabled()) { on.push_back(a_ref); }
+						}
+						else if (!a_ref->IsDisabled() && (child == Child::kSame || (a_mess && IsBlood(a_ref->GetBaseObject()))))
+						{
+							off.push_back(a_ref);
+						}
+					}
+					return RE::BSContainer::ForEachResult::kContinue;
+				});
+			}
+
+			std::sort(off.begin(), off.end());
+			off.erase(std::unique(off.begin(), off.end()), off.end());
+			for (auto* ref : off)
+			{
+				logger::debug("clean-up ({}): disabled {:08X}", a_when, ref->GetFormID());
+				ref->Disable();
+			}
+			for (auto* ref : on) { ref->Enable(false); }
+			if (!off.empty() || !on.empty())
+			{
+				logger::info("clean-up ({}): {} reference(s) still on were disabled, {} opposite child(ren) enabled", a_when, off.size(), on.size());
+			}
+		}
+
+		// Is the Butcher's scene ours to clear? Asked only in a game where this start ran: any other player has
+		// the steward's own purchase and the case as vanilla has it. Here, yes once the case is settled by the
+		// setting, or, when the case was left alone, once it is genuinely COMPLETED, because its clue items
+		// live under that marker.
+		bool SceneIsOurs()
+		{
+			if (settings::start::bloodOnTheIce != settings::start::kBotiLeave) { return true; }
+			if (!settings::start::cleanUpAfterBloodOnTheIce) { return false; }
+			const auto* ms11 = Vanilla<RE::TESQuest>(hjerim::kBloodOnTheIce);
+			return ms11 && ms11->IsCompleted();
 		}
 
 		// Game.IncrementStat("Houses Owned") - the one thing PurchaseHouse does that has no C++ handle.
@@ -226,8 +356,8 @@ namespace start
 
 		// The sale, as HousePurchaseScript.PurchaseHouse does it, minus the gold: the cell to the player's
 		// faction, the key and the decorating guide into the pack, the script variable, the count. Then
-		// what Blood on the Ice's own resolution does to the house: the abandoned clutter off, the basic
-		// furnishing and the player's chest on.
+		// what Blood on the Ice's own resolution does to the house: the basic furnishing and the player's
+		// chest on (the abandoned clutter went before the move, see ClearTheHouse).
 		void HandOver(RE::PlayerCharacter* a_player, Report& a_report)
 		{
 			if (auto* cell = Vanilla<RE::TESObjectCELL>(hjerim::kHjerimCell))
@@ -279,7 +409,6 @@ namespace start
 
 			CountTheHouse();
 
-			DisableMarker(hjerim::kAbandonedClutter, "the abandoned clutter");
 			EnableMarker(hjerim::kPlayerChest, "the player's chest");
 			SettleBloodOnTheIce(a_report);
 		}
@@ -326,9 +455,10 @@ namespace start
 
 		// The order:
 		//   0        wait until the player has actually arrived
-		//   1        the sale - deed, key, guide, script variable, count, abandoned clutter off, chest on
+		//   1        the sale - deed, key, guide, script variable, count, chest on
 		//   2..n     one room's furniture per step
-		//   last     stop our own quest, remember that we ran, say what happened
+		//   last     look over the house once more, stop our own quest, say what happened
+		// (The clutter and the blood go before all of this, in Run, before the player is moved.)
 		void RunStep(std::string a_reason, std::size_t a_step)
 		{
 			auto* player = RE::PlayerCharacter::GetSingleton();
@@ -375,14 +505,15 @@ namespace start
 				return;
 			}
 
-			// The last step: tidy up and say what actually happened. Our own quest has nothing left to do
-			// once it has run, and a quest left running shows up in save inspections forever.
+			// The last step: tidy up and say what actually happened. Enabling a room marker turns on all its
+			// children, so the house is looked over again after them. Our own quest has nothing left to do once
+			// it has run, and a quest left running shows up in save inspections forever.
+			ClearTheHouse("furnished", SceneIsOurs());
 			if (auto* ours = OurQuest(); ours && ours->IsEnabled())
 			{
 				ours->Stop();
 				logger::debug("start: our own quest stopped");
 			}
-			g_ranInThisGame.store(true);
 
 			std::scoped_lock l(g_lock);
 			logger::info("start ({}): finished - moved={} owned={} key={} guide={} scriptVar={} bloodOnTheIce={} rooms={}/{}{}",
@@ -413,19 +544,12 @@ namespace start
 			QueueStep(std::move(a_reason), 0);
 		}
 
-		// Blood on the Ice closed: the Butcher's mess goes, as the steward's 500-septim "clean up the mess"
-		// would have removed it. Only for a house this mod handed over - a player who bought Hjerim keeps
-		// the steward's purchase - and only once the quest is genuinely COMPLETED, because its clue items
-		// live under that marker.
+		// The Butcher's mess goes, as the steward's 500-septim "clean up the mess" would have removed it. Only
+		// for a house this mod handed over - a player who bought Hjerim keeps the steward's purchase.
 		void CleanUpIfCaseClosed(const char* a_when)
 		{
-			if (!settings::start::cleanUpAfterBloodOnTheIce || !g_ranInThisGame.load()) { return; }
-			auto* ms11 = Vanilla<RE::TESQuest>(hjerim::kBloodOnTheIce);
-			if (!ms11 || !ms11->IsCompleted()) { return; }
-			auto* clutter = Vanilla<RE::TESObjectREFR>(hjerim::kKillerClutter);
-			if (!clutter || clutter->IsDeleted() || clutter->IsDisabled()) { return; }
-			logger::info("clean-up ({}): Blood on the Ice is completed; removing the Butcher's mess", a_when);
-			DisableMarker(hjerim::kKillerClutter, "the Butcher's mess");
+			if (!g_ranInThisGame.load()) { return; }
+			ClearTheHouse(a_when, SceneIsOurs());
 		}
 
 		// Three moments can close the case from this mod's point of view, and none of them alone is enough:
@@ -566,6 +690,11 @@ namespace start
 
 		logger::info("start ({}): beginning", report.reason);
 
+		// From here on this game's house is ours to look after, and the first thing it needs is to be
+		// clean BEFORE the player's arrival attaches the cell (see ClearTheHouse).
+		g_ranInThisGame.store(true);
+		ClearTheHouse("before the move", SceneIsOurs());
+
 		g_destination = nullptr;
 		if (settings::start::moveToHjerim) { report.moved = MovePlayer(player, report.problem); }
 		else { logger::info("move: skipped (bMoveToHjerim=0)"); }
@@ -635,6 +764,12 @@ namespace start
 		auto* owner = cell ? cell->GetOwner() : nullptr;
 		auto* abandoned = Vanilla<RE::TESObjectREFR>(hjerim::kAbandonedClutter);
 		auto* killer = Vanilla<RE::TESObjectREFR>(hjerim::kKillerClutter);
+		int bloodStillOn = 0;
+		for (const auto id : hjerim::kBloodDecals)
+		{
+			const auto* decal = Vanilla<RE::TESObjectREFR>(id);
+			if (decal && !decal->IsDisabled()) { ++bloodStillOn; }
+		}
 
 		std::string rooms;
 		for (std::size_t i = 0; i < hjerim::kRoomCount; ++i)
@@ -647,13 +782,13 @@ namespace start
 		return std::format(
 			"\"chosen\":{},\"ranInThisGame\":{},"
 			"\"ourQuest\":{{\"formID\":\"{:08X}\",\"enabled\":{},\"stopped\":{}}},"
-			"\"house\":{{\"cell\":\"{:08X}\",\"owner\":\"{}\",\"ownedByPlayerFaction\":{},\"abandonedClutterEnabled\":{},\"killerClutterEnabled\":{},\"rooms\":[{}]}},"
+			"\"house\":{{\"cell\":\"{:08X}\",\"owner\":\"{}\",\"ownedByPlayerFaction\":{},\"abandonedClutterEnabled\":{},\"killerClutterEnabled\":{},\"bloodDecalsEnabled\":{},\"rooms\":[{}]}},"
 			"\"bloodOnTheIce\":{{\"formID\":\"{:08X}\",\"enabled\":{},\"completed\":{},\"stage\":{}}},"
 			"\"lastRun\":{{\"ran\":{},\"reason\":\"{}\",\"moved\":{},\"owned\":{},\"keyGiven\":{},\"guideGiven\":{},\"scriptVarSet\":{},\"bloodOnTheIceSettled\":{},\"roomsFurnished\":{},\"problem\":\"{}\"}}",
 			g_chosen.load() ? "true" : "false", g_ranInThisGame.load() ? "true" : "false",
 			g_questID, ours && ours->IsEnabled() ? "true" : "false", ours && ours->IsStopped() ? "true" : "false",
 			hjerim::kHjerimCell, owner ? owner->GetFormEditorID() : "", owner && owner->GetFormID() == hjerim::kPlayerFaction ? "true" : "false",
-			abandoned && !abandoned->IsDisabled() ? "true" : "false", killer && !killer->IsDisabled() ? "true" : "false", rooms,
+			abandoned && !abandoned->IsDisabled() ? "true" : "false", killer && !killer->IsDisabled() ? "true" : "false", bloodStillOn, rooms,
 			hjerim::kBloodOnTheIce, ms11 && ms11->IsEnabled() ? "true" : "false", ms11 && ms11->IsCompleted() ? "true" : "false",
 			ms11 ? ms11->GetCurrentStageID() : 0,
 			g_report.ran ? "true" : "false", JsonText(g_report.reason), g_report.moved ? "true" : "false",

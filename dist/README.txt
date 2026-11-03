@@ -95,7 +95,7 @@ No in-game menu page any more: the mod simply adds the start. Every setting is s
 Version 1.0.1
 The mod is named Alternate Perspective Hjerim Addon, and its plugin with it.
 The option now sits inside Alternate Perspective's own "My own Home" card, beside Whiterun, Solitude, Riften and Markarth, instead of being a card of its own. It is added to that card as the menu opens, in your language; no file of Alternate Perspective's is touched, and if a future version has no such card the start appears as its own card instead.
-The start settles Blood on the Ice: marked solved by default (the state the game itself reaches when the case is closed), or turned off, or left alone to play as usual. The first two also clear the grisly clutter in the hidden room.
+The start settles Blood on the Ice: marked solved by default (the state the game itself reaches when the case is closed), or turned off, or left alone to play as usual. The first two also clear the grisly clutter in the hidden room and the blood on the floors, before you arrive.
 
 
 LICENCE

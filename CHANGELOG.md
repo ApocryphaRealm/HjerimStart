@@ -1,5 +1,10 @@
 # Alternate Perspective Hjerim Addon - changelog
 
+## 1.0.4 - 2026-11-03 - untested
+
+### Fixed
+- **Choosing Hjerim no longer leaves blood on the floor.** The four blood decals on the main floor are placed references hung off the Butcher's enable marker, and a placed decal is painted onto the floor when the cell loads, so switching it off with the player already standing there left the paint until the cell next loaded - and 1.0.3 did the clean-up after the arrival. The abandoned clutter, the Butcher's mess and the decals now go before the player is moved, so the cell loads clean, the way it does for a buyer who pays the steward from the palace. The house is looked over again when the furnishing is done and on each entry, by the vanilla FormIDs, by the children of those two markers, and by base (a texture set or static whose path names blood), so blood from another mod's scene goes too. No cell or reference record is edited; the game keeps the disabled state in the save, so nothing has to re-run after a load. A player who did not choose this start is never touched.
+
 ## 1.0.3 - 2026-10-25 - untested
 
 ### Fixed
